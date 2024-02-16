@@ -5,16 +5,17 @@
 #'@param model_output_data a `model_out_tbl` object, containing all the required
 #' columns including a column containing date information (`x_col_name`
 #' parameter) and a column `value`.
-#'@param truth_data a `data.frame` object containing the ground truth data,
-#' with a column containing date information (`x_truth_col_name` parameter) and
-#' a column `value`. Ignored, if `plot_truth = FALSE`.
+#'@param target_data a `data.frame` object containing the target data,
+#' with a column containing date information (`x_target_col_name` parameter) and
+#' a column `value`. Ignored, if `plot_target = FALSE`.
 #'@param use_median_as_point a `Boolean` for using median quantile as point
 #' in plot. Default to FALSE. If TRUE, will select first any `median`
 #' output type value and if no `median` value included in `model_output_data`;
 #' will select `quantile = 0.5` output type value.
 #'@param show_plot a `boolean` for showing the plot. Default to TRUE.
-#'@param plot_truth a `boolean` for showing the truth data in the plot.
-#'  Default to TRUE. Data used in the plot comes from the parameter `truth_data`
+#'@param plot_target a `boolean` for showing the target data in the plot.
+#'  Default to TRUE. Data used in the plot comes from the parameter
+#'  `target_data`
 #'@param show_legend a `boolean` for showing the legend in the plot.
 #'  Default to TRUE.
 #'@param facet a unique value corresponding as a task_id variable name
@@ -50,7 +51,7 @@
 #' interval only. Value possibles: `0.5, 0.8, 0.9, 0.95`
 #'@param top_layer character vector, where the first element indicates the top
 #'  layer of the resulting plot. Possible options are `"model_output"` (default)
-#'  and `"truth"`
+#'  and `"target"`
 #'@param title a `character` string, if not NULL, will be added as title to the
 #' plot
 #'@param ens_color a `character` string of a color name, if not NULL, will be
@@ -62,8 +63,8 @@
 #'@param x_col_name column name containing the date information for `all_plot`
 #' and `all_ens` data frames, value will be map to the x-axis of the plot.
 #' By default, "target_date".
-#'@param x_truth_col_name  column name containing the date information for
-#' `truth_data` data frame, value will be map to the x-axis of the plot.
+#'@param x_target_col_name  column name containing the date information for
+#' `target_data` data frame, value will be map to the x-axis of the plot.
 #' By default, "time_idx".
 #'
 #' @importFrom cli cli_abort cli_warn
@@ -89,19 +90,19 @@
 #'      scenario_id == "A-2021-03-05", location == "US")
 #' projection_data <- hubUtils::as_model_out_tbl(projection_data)
 #'
-#' truth_path <- system.file("truth_data.csv", package = "hubVis")
-#' truth_data <- read.csv(truth_path, stringsAsFactors = FALSE)
-#' truth_data_us <- dplyr::filter(truth_data, location == "US",
+#' target_path <- system.file("target_data.csv", package = "hubVis")
+#' target_data <- read.csv(target_path, stringsAsFactors = FALSE)
+#' target_data_us <- dplyr::filter(target_data, location == "US",
 #'      time_idx < min(projection_data$target_date) + 21,
 #'      time_idx > "2020-10-01")
 #'
 #' # Plot
-#' plot_step_ahead_model_output(projection_data, truth_data_us)
+#' plot_step_ahead_model_output(projection_data, target_data_us)
 #'
 plot_step_ahead_model_output <- function(
-    model_output_data, truth_data, use_median_as_point = FALSE, show_plot = TRUE,
-    plot_truth = TRUE, x_col_name = "target_date",
-    x_truth_col_name = "time_idx", show_legend = TRUE, facet = NULL,
+    model_output_data, target_data, use_median_as_point = FALSE,
+    show_plot = TRUE, plot_target = TRUE, x_col_name = "target_date",
+    x_target_col_name = "time_idx", show_legend = TRUE, facet = NULL,
     facet_scales = "fixed", facet_nrow = NULL, facet_ncol = NULL,
     facet_title = "top left", interactive = TRUE, fill_by = "model_id",
     pal_color = "Set2", one_color = "blue", fill_transparency = 0.25,
@@ -136,15 +137,15 @@ plot_step_ahead_model_output <- function(
     ))
   }
 
-  ## Truth Data
-  if (plot_truth) {
-    if (!is.data.frame(truth_data)) {
-      cli::cli_abort(c("x" = "{.arg truth_data} must be a `data.frame`."))
+  ## Target Data
+  if (plot_target) {
+    if (!is.data.frame(target_data)) {
+      cli::cli_abort(c("x" = "{.arg target_data} must be a `data.frame`."))
     }
-    exp_td_col <- c(x_truth_col_name, "value")
-    truth_data_col <- colnames(truth_data)
-    if (!all(exp_td_col %in% truth_data_col)) {
-      cli::cli_abort(c("x" = "{.arg truth_data} did not have all required
+    exp_td_col <- c(x_target_col_name, "value")
+    target_data_col <- colnames(target_data)
+    if (!all(exp_td_col %in% target_data_col)) {
+      cli::cli_abort(c("x" = "{.arg target_data} did not have all required
                      columns {.val {exp_td_col}}"))
     }
   }
@@ -167,8 +168,8 @@ plot_step_ahead_model_output <- function(
         intervals <- as.character(c(.5, .8, .95))
       }
     }
-    if (length(unique(model_output_data[["model_id"]])) > 5 &
-        length(intervals) > 1) {
+    if (length(unique(model_output_data[["model_id"]])) > 5 &&
+          length(intervals) > 1) {
       intervals <- max(intervals)[1]
       cli::cli_warn(c("!" = "{.arg model_output_data} contains 6 or more models,
                       the plot will be reduced to show only one interval (the
@@ -199,8 +200,8 @@ plot_step_ahead_model_output <- function(
                      expected output_type_id value {.val {exp_value}}"))
   }
   if (!class(exp_value) %in% class(model_output_type_val)) {
-    model_output_data$output_type_id <- as.numeric(
-      model_output_data$output_type_id)
+    model_output_data$output_type_id <-
+      as.numeric(model_output_data$output_type_id)
     cli::cli_warn(c("!" = "{.arg output_type_id} column must be a numeric.
                     Class applied by default."))
   }
@@ -213,14 +214,23 @@ plot_step_ahead_model_output <- function(
   }
   ### Facet
   if (!is.null(facet)) {
-    if ((length(facet) != 1) |
-        !all(facet %in% setdiff(
-          colnames(model_output_data),
-          hubUtils::std_colnames[names(hubUtils::std_colnames) != "model_id"]
-        ))) {
+    if ((length(facet) != 1) ||
+          !all(facet %in%
+                 setdiff(colnames(model_output_data),
+                         hubUtils::std_colnames[names(hubUtils::std_colnames) !=
+                                                  "model_id"]))) {
       cli::cli_abort(c("x" = "if {.arg facet} is not NULL, the argument should
                        be of length 1 and should match one of the task_id column
                        of {.arg model_output_data}"))
+    }
+    facet_max <- length(unique(model_output_data[[facet]]))
+    if ((interactive) && !is.null(facet_nrow)) {
+      if (facet_nrow > facet_max) {
+        cli::cli_warn(c("!" = "{.arg facet_nrow} should be less or equal to the
+                    number of unique {.arg facet} value. By default, the
+                    parameter will be set to {.val {facet_max}}"))
+        facet_nrow <- facet_max
+      }
     }
   }
   if (!is.null(facet_title)) {
@@ -231,10 +241,10 @@ plot_step_ahead_model_output <- function(
     }
   }
   #### Top layer
-  if (!any(top_layer %in% c("model_output", "truth"))) {
+  if (!any(top_layer %in% c("model_output", "target"))) {
     cli::cli_abort(c("x" = "{.arg top_layer} should correspond to one of
                        these possible values: {.val model_output},
-                     {.val truth}"))
+                     {.val target}"))
   }
 
   #### Palette
@@ -260,26 +270,26 @@ plot_step_ahead_model_output <- function(
                       {.val blue} used by default."))
       one_color <- "blue"
     }
-    pal_color = one_color
+    pal_color <- one_color
     pal_value <- rep(pal_color, length(fill_by_vect))
   }
   names(pal_value) <- fill_by_vect
-  if (!is.null(ens_color) & !is.null(ens_name))
-    pal_value[ens_name] <- grDevices::rgb(
-      grDevices::col2rgb(ens_color)[1], grDevices::col2rgb(ens_color)[2],
-      grDevices::col2rgb(ens_color)[3])
-  if (plot_truth) {
-    pal_value <- c(pal_value, "Truth Data" = "#6e6e6e")
+  if (!is.null(ens_color) && !is.null(ens_name))
+    pal_value[ens_name] <- grDevices::rgb(grDevices::col2rgb(ens_color)[1],
+                                          grDevices::col2rgb(ens_color)[2],
+                                          grDevices::col2rgb(ens_color)[3])
+  if (plot_target) {
+    pal_value <- c(pal_value, "Target Dat" = "#6e6e6e")
   }
 
 
   # Data process
-  if (!is.null(ens_color) & !is.null(ens_name)) {
+  if (!is.null(ens_color) && !is.null(ens_name)) {
     ens_df <- model_output_data[which(model_output_data$model_id == ens_name), ]
     all_ens <- plot_prep_data(ens_df, plain_line, plain_type, ribbon,
                               x_col_name = x_col_name)
-    plot_df <- model_output_data[which(
-      model_output_data$model_id != ens_name), ]
+    plot_df <- model_output_data[which(model_output_data$model_id !=
+                                         ens_name), ]
   } else {
     all_ens <- NULL
     plot_df <- model_output_data
@@ -293,8 +303,8 @@ plot_step_ahead_model_output <- function(
   } else {
     facet_value <- NULL
   }
-  plot_model <- output_plot(all_plot, all_ens, truth_data,
-                            plot_truth = plot_truth,
+  plot_model <- output_plot(all_plot, all_ens, target_data,
+                            plot_target = plot_target,
                             intervals =  intervals, pal_color = pal_color,
                             fill_transparency = fill_transparency,
                             pal_value = pal_value, top_layer = top_layer,
@@ -304,12 +314,12 @@ plot_step_ahead_model_output <- function(
                             facet_value = facet_value, facet_ncol = facet_ncol,
                             interactive = interactive, fill_by = fill_by,
                             x_col_name = x_col_name,
-                            x_truth_col_name = x_truth_col_name)
+                            x_target_col_name = x_target_col_name)
   # Layout
   if (interactive) {
-    plot_model <- plotly::layout(
-      plot_model, xaxis = list(title = 'Date'), yaxis = list(title = 'Value'),
-      showlegend = show_legend)
+    plot_model <- plotly::layout(plot_model, xaxis = list(title = "Date"),
+                                 yaxis = list(title = "Value"),
+                                 showlegend = show_legend)
     if (!is.null(title)) {
       plot_model <- plotly::layout(plot_model, title = title)
     }
